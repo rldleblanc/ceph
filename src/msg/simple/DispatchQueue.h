@@ -140,40 +140,40 @@ class DispatchQueue {
     Mutex::Locker l(lock);
     if (stop)
       return;
-    mqueue.enqueue_strict(
-      0,
-      CEPH_MSG_PRIO_HIGHEST,
-      QueueItem(D_CONNECT, con));
+    mqueue.enqueue(0, QueueItem(D_CONNECT, con),
+		   CEPH_MSG_PRIO_HIGHEST,
+		   CEPH_OP_QUEUE_BACK,
+		   CEPH_OP_CLASS_STRICT);
     cond.Signal();
   }
   void queue_accept(Connection *con) {
     Mutex::Locker l(lock);
     if (stop)
       return;
-    mqueue.enqueue_strict(
-      0,
-      CEPH_MSG_PRIO_HIGHEST,
-      QueueItem(D_ACCEPT, con));
+    mqueue.enqueue(0, QueueItem(D_ACCEPT, con),
+		   CEPH_MSG_PRIO_HIGHEST,
+		   CEPH_OP_QUEUE_BACK,
+		   CEPH_OP_CLASS_STRICT);
     cond.Signal();
   }
   void queue_remote_reset(Connection *con) {
     Mutex::Locker l(lock);
     if (stop)
       return;
-    mqueue.enqueue_strict(
-      0,
-      CEPH_MSG_PRIO_HIGHEST,
-      QueueItem(D_BAD_REMOTE_RESET, con));
+    mqueue.enqueue(0, QueueItem(D_BAD_REMOTE_RESET, con),
+		   CEPH_MSG_PRIO_HIGHEST,
+		   CEPH_OP_QUEUE_BACK,
+		   CEPH_OP_CLASS_STRICT);
     cond.Signal();
   }
   void queue_reset(Connection *con) {
     Mutex::Locker l(lock);
     if (stop)
       return;
-    mqueue.enqueue_strict(
-      0,
-      CEPH_MSG_PRIO_HIGHEST,
-      QueueItem(D_BAD_RESET, con));
+    mqueue.enqueue(0, QueueItem(D_BAD_RESET, con),
+		   CEPH_MSG_PRIO_HIGHEST,
+		   CEPH_OP_QUEUE_BACK,
+		   CEPH_OP_CLASS_STRICT);
     cond.Signal();
   }
 
