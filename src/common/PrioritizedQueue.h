@@ -115,17 +115,17 @@ class PrioritizedQueue {
       else
 	tokens = 0;
     }
-    void enqueue(K cl, unsigned cost, T item) {
-      q[cl].push_back(std::make_pair(cost, item));
-      if (cur == q.end())
+    void enqueue(K cl, unsigned cost, T item,
+		 bool front = CEPH_OP_QUEUE_BACK) {
+      if (front == CEPH_OP_QUEUE_FRONT) {
+	q[cl].push_front(std::make_pair(cost, item));
+      } else {
+	q[cl].push_back(std::make_pair(cost, item));
+      }
+      if (cur == q.end()) {
 	cur = q.begin();
-      size++;
-    }
-    void enqueue_front(K cl, unsigned cost, T item) {
-      q[cl].push_front(std::make_pair(cost, item));
-      if (cur == q.end())
-	cur = q.begin();
-      size++;
+      }
+      ++size;
     }
     std::pair<unsigned, T> front() const {
       assert(!(q.empty()));
@@ -305,28 +305,25 @@ public:
     }
   }
 
-  void enqueue_strict(K cl, unsigned priority, T item) {
-    high_queue[priority].enqueue(cl, 0, item);
-  }
-
-  void enqueue_strict_front(K cl, unsigned priority, T item) {
-    high_queue[priority].enqueue_front(cl, 0, item);
-  }
-
-  void enqueue(K cl, unsigned priority, unsigned cost, T item) {
-    if (cost < min_cost)
-      cost = min_cost;
-    if (cost > max_tokens_per_subqueue)
-      cost = max_tokens_per_subqueue;
-    create_queue(priority)->enqueue(cl, cost, item);
-  }
-
-  void enqueue_front(K cl, unsigned priority, unsigned cost, T item) {
-    if (cost < min_cost)
-      cost = min_cost;
-    if (cost > max_tokens_per_subqueue)
-      cost = max_tokens_per_subqueue;
-    create_queue(priority)->enqueue_front(cl, cost, item);
+  void enqueue (K cl, T item, unsigned priority, unsigned cost = 0,
+		bool front = CEPH_OP_QUEUE_BACK,
+		unsigned opclass = CEPH_OP_CLASS_NORMAL) final {
+    switch (opclass){
+      case CEPH_OP_CLASS_NORMAL :
+	if (cost < min_cost) {
+	  cost = min_cost;
+	}
+	if (cost > max_tokens_per_subqueue) {
+	  cost = max_tokens_per_subqueue;
+	}
+	create_queue(priority)->enqueue(cl, cost, item, front);
+	break;
+      case CEPH_OP_CLASS_STRICT :
+	high_queue[priority].enqueue(cl, 0, item, front);
+	break;
+      default :
+	assert(1);
+    }
   }
 
   bool empty() const {
