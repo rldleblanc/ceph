@@ -17,6 +17,7 @@
 
 #include "common/Mutex.h"
 #include "common/Formatter.h"
+#include "common/OpQueue.h"
 
 #include <map>
 #include <utility>
@@ -44,15 +45,15 @@
  * to provide fairness for different clients.
  */
 template <typename T, typename K>
-class PrioritizedQueue {
+class PrioritizedQueue : public OpQueue <T, K> {
   int64_t total_priority;
   int64_t max_tokens_per_subqueue;
   int64_t min_cost;
 
   typedef std::list<std::pair<unsigned, T> > ListPairs;
-  template <class F>
   static unsigned filter_list_pairs(
-    ListPairs *l, F f,
+    ListPairs *l,
+    std::function<bool (T)> f,
     std::list<T> *out) {
     unsigned ret = 0;
     if (out) {
@@ -151,8 +152,9 @@ class PrioritizedQueue {
     bool empty() const {
       return q.empty();
     }
-    template <class F>
-    void remove_by_filter(F f, std::list<T> *out) {
+    void remove_by_filter(
+	std::function<bool (T)> f,
+       	std::list<T> *out) {
       for (typename Classes::iterator i = q.begin();
 	   i != q.end();
 	   ) {
@@ -236,7 +238,7 @@ public:
       min_cost(min_c)
   {}
 
-  unsigned length() const {
+  unsigned length() const override final {
     unsigned total = 0;
     for (typename SubQueues::const_iterator i = queue.begin();
 	 i != queue.end();
@@ -253,8 +255,9 @@ public:
     return total;
   }
 
-  template <class F>
-  void remove_by_filter(F f, std::list<T> *removed = 0) {
+  void remove_by_filter(
+      std::function<bool (T)> f,
+      std::list<T> *removed = 0) override final {
     for (typename SubQueues::iterator i = queue.begin();
 	 i != queue.end();
 	 ) {
@@ -280,7 +283,7 @@ public:
     }
   }
 
-  void remove_by_class(K k, std::list<T> *out = 0) {
+  void remove_by_class(K k, std::list<T> *out = 0) override final {
     for (typename SubQueues::iterator i = queue.begin();
 	 i != queue.end();
 	 ) {
@@ -307,7 +310,7 @@ public:
 
   void enqueue (K cl, T item, unsigned priority, unsigned cost = 0,
 		bool front = CEPH_OP_QUEUE_BACK,
-		unsigned opclass = CEPH_OP_CLASS_NORMAL) final {
+		unsigned opclass = CEPH_OP_CLASS_NORMAL) override final {
     switch (opclass){
       case CEPH_OP_CLASS_NORMAL :
 	if (cost < min_cost) {
@@ -326,13 +329,13 @@ public:
     }
   }
 
-  bool empty() const {
+  bool empty() const override final {
     assert(total_priority >= 0);
     assert((total_priority == 0) || !(queue.empty()));
     return queue.empty() && high_queue.empty();
   }
 
-  T dequeue() {
+  T dequeue() override final {
     assert(!empty());
 
     if (!(high_queue.empty())) {
@@ -373,7 +376,7 @@ public:
     return ret;
   }
 
-  void dump(Formatter *f) const {
+  void dump(Formatter *f) const override final {
     f->dump_int("total_priority", total_priority);
     f->dump_int("max_tokens_per_subqueue", max_tokens_per_subqueue);
     f->dump_int("min_cost", min_cost);
