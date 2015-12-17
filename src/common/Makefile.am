@@ -179,6 +179,7 @@ noinst_HEADERS += \
 	common/WorkQueue.h \
 	common/OpQueue.h \
 	common/PrioritizedQueue.h \
+	common/WrrQueue.h \
 	common/WeightedPriorityQueue.h \
 	common/ceph_argparse.h \
 	common/ceph_context.h \
