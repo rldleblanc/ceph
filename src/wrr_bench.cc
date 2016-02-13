@@ -98,11 +98,24 @@ class Queue {
       o = rand() % (1<<16);
       return Op(p, k, c, o, s);
     }
-    void enqueue_op(Op &op, bool front = CEPH_OP_QUEUE_BACK,
-       	unsigned strict = CEPH_OP_CLASS_NORMAL) {
+    void enqueue_op(Op &op, bool front = false,
+       	unsigned strict = false) {
       start = std::chrono::system_clock::now();
-      q.enqueue(std::get<1>(op), op, std::get<0>(op),
-	            std::get<2>(op), front, strict);
+      if (strict) {
+	if (front) {
+          q.enqueue_strict_front(std::get<1>(op), std::get<0>(op), op);
+	} else {
+          q.enqueue_strict(std::get<1>(op), std::get<0>(op), op);
+	}
+      } else {
+	if (front) {
+	  q.enqueue_front(std::get<1>(op), std::get<0>(op),
+	            std::get<2>(op), op);
+	} else {
+	  q.enqueue(std::get<1>(op), std::get<0>(op),
+	            std::get<2>(op), op);
+	}
+      }
       end = std::chrono::system_clock::now();
       double ticks = std::chrono::duration_cast
 	<std::chrono::nanoseconds>(end - start).count();
@@ -200,19 +213,17 @@ class Queue {
         // Strict Queue
         if (fob == 4) {
           // Queue to the front.
-          enqueue_op(tmpop, CEPH_OP_QUEUE_FRONT,
-             	CEPH_OP_CLASS_STRICT);
+          enqueue_op(tmpop, true, true);
         } else {
           //Queue to the back.
-          enqueue_op(tmpop, CEPH_OP_QUEUE_BACK,
-             	CEPH_OP_CLASS_STRICT);
+          enqueue_op(tmpop, false, true);
         }
         break;
       default:
         // Normal queue
         if (fob == 4) {
           // Queue to the front.
-          enqueue_op(tmpop, CEPH_OP_QUEUE_FRONT);
+          enqueue_op(tmpop, true);
         } else {
           //Queue to the back.
           enqueue_op(tmpop);

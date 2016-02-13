@@ -68,7 +68,7 @@ class TestQueue :  public OpQueue <T, K>
 	//  { return a.key > b.key; }
 	//friend bool operator== (const Klass &a, const Klass &b)
 	//  { return a.key == b.key; }
-	bool insert(unsigned& cost, T& item, bool front) {
+	bool insert(unsigned cost, T& item, bool front) {
 	  if (front) {
 	    lp.push_front(*new ListPair(cost, item));
 	  } else {
@@ -78,7 +78,7 @@ class TestQueue :  public OpQueue <T, K>
 	//Get the cost of the next item to dequeue
 	unsigned get_cost() const {
 	  typename ListPairs::const_iterator i = lp.begin();
-	  std::cout << "Get lp->cost: " << std::hex << &i << std::dec << std::endl;
+	  //std::cout << "Get lp->cost: " << std::hex << &i << std::dec << std::endl;
 	  //return lp.begin()->cost;
 	  return i->cost;
 	}
@@ -98,9 +98,9 @@ class TestQueue :  public OpQueue <T, K>
 	  // so we have to walk backwards on our own. Since there is
 	  // no iterator before begin, we have to test at the end.
 	  for (Lit i = --lp.end();; --i) {
-	    std::cout << "testing: " << i->cost << ", " << i->item << std::endl;
+	    //std::cout << "testing: " << i->cost << ", " << i->item << std::endl;
 	    if (f(i->item)) {
-	      std::cout << "Deleting: " << std::endl;
+	      //std::cout << "Deleting: " << std::endl;
 	      if (out) {
 		out->push_front(i->item);
 	      }
@@ -130,7 +130,7 @@ class TestQueue :  public OpQueue <T, K>
 	void print() const {
     	  typename ListPairs::const_iterator it(lp.begin()), ite(lp.end());
     	  for (; it != ite; ++it) {
-    	    std::cout << "      L: " << it->cost << ", " << it->item << std::endl;
+    	    //std::cout << "      L: " << it->cost << ", " << it->item << std::endl;
     	  }
     	}
     };
@@ -154,7 +154,7 @@ class TestQueue :  public OpQueue <T, K>
       bool empty() const {
 	return klasses.empty();
       }
-      bool insert(K& cl, unsigned& cost, T& item, bool front = false) {
+      bool insert(K& cl, unsigned cost, T& item, bool front = false) {
 	typename Klasses::insert_commit_data insert_data;
       	std::pair<Kit, bool> ret =
 	  klasses.insert_check(cl, MapKey<Klass>(), insert_data);
@@ -169,10 +169,10 @@ class TestQueue :  public OpQueue <T, K>
 	return next->get_cost();
       }
       T& pop() {
-	std::cout << "Next pointer: " << std::hex << &next << std::dec << std::endl;
-	if (next == klasses.end()) {
-	  std::cout << "Next is at the end." << std::endl;
-	}
+	//std::cout << "Next pointer: " << std::hex << &next << std::dec << std::endl;
+	//if (next == klasses.end()) {
+	  //std::cout << "Next is at the end." << std::endl;
+	//}
 	//if (next == klasses.end()) {
 	//  next = klasses.begin();
 	//}
@@ -184,19 +184,19 @@ class TestQueue :  public OpQueue <T, K>
 	//  next = klasses.begin();
 	//}
 	check_end();
-	if (next != klasses.end()) {
-	  std::cout << "pop" << std::endl;
-	  std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
-	  std::cout << "test next: " << std::endl;
-	  std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
-	  std::cout << "next test complete." << std::endl;
-	}
+	//if (next != klasses.end()) {
+	//  std::cout << "pop" << std::endl;
+	//  std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
+	//  std::cout << "test next: " << std::endl;
+	//  std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
+	//  std::cout << "next test complete." << std::endl;
+	//}
 	return ret;
       }
       unsigned filter_list_pairs(std::function<bool (T)>& f, std::list<T>* out) {
 	unsigned count = 0;
 	for (Kit i = klasses.begin(); i != klasses.end();) {
-	  cout << "going to test klass: " << i->key << std::endl;
+	  //cout << "going to test klass: " << i->key << std::endl;
 	  count += i->filter_list_pairs(f, out);
 	  if (i->empty()) {
 	    i = klasses.erase_and_dispose(i, DelItem<Klass>());
@@ -218,8 +218,8 @@ class TestQueue :  public OpQueue <T, K>
       unsigned filter_class(K& cl, std::list<T>* out) {
 	unsigned count = 0;
 	Kit i = klasses.find(cl, MapKey<Klass>());
-	std::cout << "filter_class" << std::endl;
-	std::cout << "next: " << std::hex << &next << " <-> " << &i << std::dec << std::endl;
+	//std::cout << "filter_class" << std::endl;
+	//std::cout << "next: " << std::hex << &next << " <-> " << &i << std::dec << std::endl;
 	if (i != klasses.end()) {
 	  count = i->filter_class(out);
 	}
@@ -262,7 +262,7 @@ class TestQueue :  public OpQueue <T, K>
 	bool empty() const {
 	  return !size;
 	}
-	void insert(unsigned& p, K& cl, unsigned& cost, T& item) {
+	void insert(unsigned p, K& cl, unsigned cost, T& item, bool front = false) {
 	  typename SubQueues::insert_commit_data insert_data;
       	  std::pair<typename SubQueues::iterator, bool> ret =
       	    queues.insert_check(p, MapKey<SubQueue>(), insert_data);
@@ -270,7 +270,7 @@ class TestQueue :  public OpQueue <T, K>
       	    ret.first = queues.insert_commit(*new SubQueue(p), insert_data);
 	    total_prio += p;
       	  }
-      	  ret.first->insert(cl, cost, item);
+      	  ret.first->insert(cl, cost, item, front);
 	  if (cost > max_cost) {
 	    max_cost = cost;
 	  }
@@ -280,17 +280,17 @@ class TestQueue :  public OpQueue <T, K>
 	  --size;
 	  Sit i = --queues.end();
 	  if (strict) {
-	    std::cout << "Strict: got iterator. " << std::hex << &i << std::dec << std::endl;
+	    //std::cout << "Strict: got iterator. " << std::hex << &i << std::dec << std::endl;
 	    T& ret = i->pop();
-	    std::cout << "Got item, going to try to clean up." << std::endl;
+	    //std::cout << "Got item, going to try to clean up." << std::endl;
 	    if (i->empty()) {
-	      std::cout << "Empty priority, going to clean up." << std::endl;
+	      //std::cout << "Empty priority, going to clean up." << std::endl;
 	      queues.erase_and_dispose(i, DelItem<SubQueue>());
-	      std::cout << "Clean up successful." << std::endl;
+	      //std::cout << "Clean up successful." << std::endl;
 	    }
 	    return ret;
 	  }
-	  std::cout << "Queue size: " << queues.size() << ", total_prio: " << total_prio << std::endl;
+	  //std::cout << "Queue size: " << queues.size() << ", total_prio: " << total_prio << std::endl;
 	  if (queues.size() > 1) {
 	    while (true) {
 	      // Pick a new priority out of the total priority.
@@ -301,26 +301,26 @@ class TestQueue :  public OpQueue <T, K>
 	      // is more than the total and try to dequeue that priority.
 	      // Reverse the direction from previous because there is a higher
 	      // chance of dequeuing a high priority op so spend less time spinning.
-	      std::cout << "prio: " << prio << ", tp: " << tp << std::endl;
+	      //std::cout << "prio: " << prio << ", tp: " << tp << std::endl;
 	      while (prio <= tp) {
-		std::cout << "decrement iterator" << std::endl;
+		//std::cout << "decrement iterator" << std::endl;
 		--i;
-		std::cout << "update tp" << std::endl;
+		//std::cout << "update tp" << std::endl;
 		tp -= i->key;
-		std::cout << "prio: " << prio << ", tp: " << tp << std::endl;
+		//std::cout << "prio: " << prio << ", tp: " << tp << std::endl;
 	      }
 	      // Flip a coin to see if this priority gets to run based on cost.
 	      // The next op's cost is multiplied by .9 and subtracted from the
 	      // max cost seen. Ops with lower costs will have a larger value
 	      // and allow them to be selected easier than ops with high costs.
-	      std::cout << "Try to dequeue prio: " << i->key << std::endl;
-	      std::cout << "Next klass in prio to dequeue: " << i->next->key << std::endl;
-	      std::cout << "Check the cost" << std::endl;
+	      //std::cout << "Try to dequeue prio: " << i->key << std::endl;
+	      //std::cout << "Next klass in prio to dequeue: " << i->next->key << std::endl;
+	      //std::cout << "Check the cost" << std::endl;
 	      if (max_cost == 0 || rand() % max_cost <=
 		  (max_cost - ((i->get_cost() * 9) / 10))) {
 		break;
 	      }
-	      std::cout << "Could not dequeue based on cost" << std::endl;
+	      //std::cout << "Could not dequeue based on cost" << std::endl;
 	      i = --queues.end();
 	    }
 	  }
@@ -364,6 +364,12 @@ class TestQueue :  public OpQueue <T, K>
     Queue strict;
     Queue normal;
   public:
+    TestQueue(unsigned max_per, unsigned min_c) :
+      strict(),
+      normal()
+      {
+	std::srand(time(0));
+      }
     unsigned length() const override final {
       return strict.size + normal.size;
     }
@@ -376,24 +382,24 @@ class TestQueue :  public OpQueue <T, K>
     bool empty() const override final {
       return !(strict.size + normal.size);
     }
-    void enqueue_strict(unsigned p, K cl, unsigned cost, T item) override final {
-      strict.insert(p, cl, cost, item);
+    void enqueue_strict(K cl, unsigned p, T item) override final {
+      strict.insert(p, cl, 0, item);
     }
-    void enqueue_strict_front(unsigned p, K cl, unsigned cost, T item) override final {
-      strict.insert(p, cl, cost, item, true);
+    void enqueue_strict_front(K cl, unsigned p, T item) override final {
+      strict.insert(p, cl, 0, item, true);
     }
-    void enqueue(unsigned p, K cl, unsigned cost, T item) override final {
+    void enqueue(K cl, unsigned p, unsigned cost, T item) override final {
       normal.insert(p, cl, cost, item);
     }
-    void enqueue_front(unsigned p, K cl, unsigned cost, T item) override final {
+    void enqueue_front(K cl, unsigned p, unsigned cost, T item) override final {
       normal.insert(p, cl, cost, item, true);
     }
     T dequeue() {
       if (!strict.empty()) {
-	std::cout << "Dequeueing from strict." << std::endl;
+	//std::cout << "Dequeueing from strict." << std::endl;
 	return strict.pop(true);
       }
-      std::cout << "Dequeueing from normal." << std::endl;
+      //std::cout << "Dequeueing from normal." << std::endl;
       return normal.pop();
     }
     void dump(ceph::Formatter *f) const {
