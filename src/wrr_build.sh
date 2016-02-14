@@ -2,7 +2,7 @@
 set -x
 
 #GCCFLAGS="-std=c++11 -I. -g"
-GCCFLAGS="-std=c++11 -I. -Iinclude/ -O3 -lboost_system -lboost_iostreams"
+GCCFLAGS="-std=c++11 -g -I. -Iinclude/ -O3 -lboost_system -lboost_iostreams"
 
 g++ $GCCFLAGS -c RunningStat.cc -o RunningStat.o
 g++ $GCCFLAGS -c wrr_bench.cc -o wrr_bench.o

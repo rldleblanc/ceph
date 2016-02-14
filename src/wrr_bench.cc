@@ -267,6 +267,15 @@ class Queue {
       std::cout << std::endl;
     }
 
+    string get_terse() {
+      return get_terse_summary(nqrstat);
+    }
+
+    string get_terse_summary(Stats s) {
+      return std::to_string(eqtime.Mean()) + "," + std::to_string(eqtime.StandardDeviation()) + "," +
+	     std::to_string(s.dqtime.Mean()) + "," + std::to_string(s.dqtime.StandardDeviation());
+    }
+
     void print_substat_io(Stats s) {
       unsigned totprio = 0;
       for (PrioStat::iterator i = s.totalopdist.begin(); i != s.totalopdist.end(); ++i) {
@@ -414,7 +423,7 @@ typedef Queue<TestQueue<Op, unsigned>> TQ;
 typedef Queue<WeightedPriorityQueue<Op, unsigned>> WQ;
 
 void work_queues(PQ &pq, WQ &wq, TQ &tq, int count, int eratio,
-    string name, unsigned skew = 0) {
+    string name, string* csv = 0, unsigned skew = 0) {
   wq.reset_round_stats();
   pq.reset_round_stats();
   tq.reset_round_stats();
@@ -454,10 +463,14 @@ void work_queues(PQ &pq, WQ &wq, TQ &tq, int count, int eratio,
     std::cout << "===Test Queue stats (" << name << "):" << std::endl;
     tq.print_stats();
   }
+  if (csv) {
+    *csv += pq.get_terse() + "," + wq.get_terse() + "," + tq.get_terse();
+  }
 }
 
 int main() {
   srand(time(0));
+  string csv;
   PQ pq;
   WQ wq;
   TQ tq;
@@ -470,18 +483,19 @@ int main() {
   work_queues(pq, wq, tq, 10000, 30, "Cool-down (30/70)");
   work_queues(pq, wq, tq, 90000, 30, "Cool-down (30/70)");
   work_queues(pq, wq, tq, 1000000, 0, "Drain (0/100)");
-  work_queues(pq, wq, tq, 10000, 50, "Balanced (50/50)");
+  work_queues(pq, wq, tq, 10000, 50, "Balanced (50/50)", &csv);
+  csv += "\n";
   PQ spq;
   WQ swq;
   TQ stq;
-  work_queues(spq, swq, stq, 10000, 100, "Skew (90): Warm-up (100/0)", 90);
-  work_queues(spq, swq, stq, 10000, 70, "Skew (90): Stress (70/30)", 90);
-  work_queues(spq, swq, stq, 90000, 70, "Skew (90): Stress (70/30)", 90);
-  work_queues(spq, swq, stq, 10000, 50, "Skew (90): Balanced (50/50)", 90);
-  work_queues(spq, swq, stq, 990000, 50, "Skew (90): Balanced (50/50)", 90);
-  work_queues(spq, swq, stq, 10000, 30, "Skew (90): Cool-down (30/70)", 90);
-  work_queues(spq, swq, stq, 90000, 30, "Skew (90): Cool-down (30/70)", 90);
-  work_queues(spq, swq, stq, 1000000, 0, "Skew (90): Drain (0/100)", 90);
-  work_queues(spq, swq, stq, 10000, 50, "Skew (90): Balanced (50/50)", 90);
-
+  work_queues(spq, swq, stq, 10000, 100, "Skew (90): Warm-up (100/0)", 0, 90);
+  work_queues(spq, swq, stq, 10000, 70, "Skew (90): Stress (70/30)", 0, 90);
+  work_queues(spq, swq, stq, 90000, 70, "Skew (90): Stress (70/30)", 0, 90);
+  work_queues(spq, swq, stq, 10000, 50, "Skew (90): Balanced (50/50)", 0, 90);
+  work_queues(spq, swq, stq, 990000, 50, "Skew (90): Balanced (50/50)", 0, 90);
+  work_queues(spq, swq, stq, 10000, 30, "Skew (90): Cool-down (30/70)", 0, 90);
+  work_queues(spq, swq, stq, 90000, 30, "Skew (90): Cool-down (30/70)", 0, 90);
+  work_queues(spq, swq, stq, 1000000, 0, "Skew (90): Drain (0/100)", 0, 90);
+  work_queues(spq, swq, stq, 10000, 50, "Skew (90): Balanced (50/50)", &csv, 90);
+  std::cout << csv << std::endl;
 }

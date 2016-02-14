@@ -10,6 +10,7 @@
 #include <list>
 #include <iostream>
 #include <boost/intrusive/list.hpp>
+#include <boost/intrusive/rbtree.hpp>
 #include <boost/intrusive/avl_set.hpp>
 
 namespace bi = boost::intrusive;
@@ -52,7 +53,8 @@ class TestQueue :  public OpQueue <T, K>
           item(i)
           {}
     };
-    class Klass : public bi::avl_set_base_hook<>
+    //class Klass : public bi::avl_set_base_hook<>
+    class Klass : public bi::set_base_hook<>
     {
       typedef bi::list<ListPair> ListPairs;
       typedef typename ListPairs::iterator Lit;
@@ -134,9 +136,11 @@ class TestQueue :  public OpQueue <T, K>
     	  }
     	}
     };
-    class SubQueue : public bi::avl_set_base_hook<>
+    //class SubQueue : public bi::avl_set_base_hook<>
+    class SubQueue : public bi::set_base_hook<>
     {
-      typedef bi::avl_set<Klass> Klasses;
+      //typedef bi::avl_set<Klass> Klasses;
+      typedef bi::rbtree<Klass> Klasses;
       typedef typename Klasses::iterator Kit;
       void check_end() {
 	if (next == klasses.end()) {
@@ -157,9 +161,11 @@ class TestQueue :  public OpQueue <T, K>
       bool insert(K& cl, unsigned cost, T& item, bool front = false) {
 	typename Klasses::insert_commit_data insert_data;
       	std::pair<Kit, bool> ret =
-	  klasses.insert_check(cl, MapKey<Klass>(), insert_data);
+	  //klasses.insert_check(cl, MapKey<Klass>(), insert_data);
+	  klasses.insert_unique_check(cl, MapKey<Klass>(), insert_data);
       	if (ret.second) {
-      	  ret.first = klasses.insert_commit(*new Klass(cl), insert_data);
+      	  //ret.first = klasses.insert_commit(*new Klass(cl), insert_data);
+      	  ret.first = klasses.insert_unique_commit(*new Klass(cl), insert_data);
 	  check_end();
       	}
       	ret.first->insert(cost, item, front);
@@ -247,7 +253,8 @@ class TestQueue :  public OpQueue <T, K>
       }
     };
     class Queue {
-      typedef bi::avl_set<SubQueue> SubQueues;
+      //typedef bi::avl_set<SubQueue> SubQueues;
+      typedef bi::rbtree<SubQueue> SubQueues;
       typedef typename SubQueues::iterator Sit;
       SubQueues queues;
       unsigned total_prio;
@@ -265,9 +272,11 @@ class TestQueue :  public OpQueue <T, K>
 	void insert(unsigned p, K& cl, unsigned cost, T& item, bool front = false) {
 	  typename SubQueues::insert_commit_data insert_data;
       	  std::pair<typename SubQueues::iterator, bool> ret =
-      	    queues.insert_check(p, MapKey<SubQueue>(), insert_data);
+      	    //queues.insert_check(p, MapKey<SubQueue>(), insert_data);
+      	    queues.insert_unique_check(p, MapKey<SubQueue>(), insert_data);
       	  if (ret.second) {
-      	    ret.first = queues.insert_commit(*new SubQueue(p), insert_data);
+      	    //ret.first = queues.insert_commit(*new SubQueue(p), insert_data);
+      	    ret.first = queues.insert_unique_commit(*new SubQueue(p), insert_data);
 	    total_prio += p;
       	  }
       	  ret.first->insert(cl, cost, item, front);
@@ -301,13 +310,21 @@ class TestQueue :  public OpQueue <T, K>
 	      // is more than the total and try to dequeue that priority.
 	      // Reverse the direction from previous because there is a higher
 	      // chance of dequeuing a high priority op so spend less time spinning.
-	      //std::cout << "prio: " << prio << ", tp: " << tp << std::endl;
+	      //std::cout << "prio: " << prio << ", tp: " << tp << "/" << total_prio << std::endl;
 	      while (prio <= tp) {
+		//if (tp > 1000) {
+		//  print();
+		//}
+		//assert(tp < 1000);
 		//std::cout << "decrement iterator" << std::endl;
 		--i;
-		//std::cout << "update tp" << std::endl;
+		//std::cout << "update tp, subtracting " << i->key << std::endl;
+		//if (i->key < prio) {
+		//  std::cout << "key < prio, stopping the vicious cycle." << std::endl;
+		//  break;
+		//}
 		tp -= i->key;
-		//std::cout << "prio: " << prio << ", tp: " << tp << std::endl;
+		//std::cout << "prio: " << prio << ", tp: " << tp << "/" << total_prio << std::endl;
 	      }
 	      // Flip a coin to see if this priority gets to run based on cost.
 	      // The next op's cost is multiplied by .9 and subtracted from the
@@ -326,6 +343,7 @@ class TestQueue :  public OpQueue <T, K>
 	  }
 	  T& ret = i->pop();
 	  if (i->empty()) {
+	    total_prio -= i->key;
 	    queues.erase_and_dispose(i, DelItem<SubQueue>());
 	  }
 	  return ret;
