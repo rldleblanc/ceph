@@ -46,210 +46,256 @@ class TestQueue :  public OpQueue <T, K>
     class ListPair : public bi::list_base_hook<>
     {
       public:
+	K klass;
         unsigned cost;
         T item;
-        ListPair(unsigned& c, T& i) :
+        ListPair(K& k, unsigned c, T& i) :
+	  klass(k),
           cost(c),
           item(i)
           {}
     };
-    //class Klass : public bi::avl_set_base_hook<>
-    class Klass : public bi::set_base_hook<>
-    {
-      typedef bi::list<ListPair> ListPairs;
-      typedef typename ListPairs::iterator Lit;
-      public:
-        K key;		// klass
-        ListPairs lp;
-        Klass(K& k) :
-          key(k)
-          {}
-	//friend bool operator< (const Klass &a, const Klass &b)
-	//  { return a.key < b.key; }
-	//friend bool operator> (const Klass &a, const Klass &b)
-	//  { return a.key > b.key; }
-	//friend bool operator== (const Klass &a, const Klass &b)
-	//  { return a.key == b.key; }
-	bool insert(unsigned cost, T& item, bool front) {
-	  if (front) {
-	    lp.push_front(*new ListPair(cost, item));
-	  } else {
-	    lp.push_back(*new ListPair(cost, item));
-	  }
-	}
-	//Get the cost of the next item to dequeue
-	unsigned get_cost() const {
-	  typename ListPairs::const_iterator i = lp.begin();
-	  //std::cout << "Get lp->cost: " << std::hex << &i << std::dec << std::endl;
-	  //return lp.begin()->cost;
-	  return i->cost;
-	}
-	T& pop() {
-	  Lit i = lp.begin();
-	  T& ret = i->item;
-	  lp.erase_and_dispose(i, DelItem<ListPair>());
-	  return ret;
-	}
-	bool empty() const {
-	  return lp.empty();
-	}
-	unsigned filter_list_pairs(std::function<bool (T)>& f,
-	  std::list<T>* out) {
-	  unsigned count = 0;
-	  // intrusive containers can't erase with a reverse_iterator
-	  // so we have to walk backwards on our own. Since there is
-	  // no iterator before begin, we have to test at the end.
-	  for (Lit i = --lp.end();; --i) {
-	    //std::cout << "testing: " << i->cost << ", " << i->item << std::endl;
-	    if (f(i->item)) {
-	      //std::cout << "Deleting: " << std::endl;
-	      if (out) {
-		out->push_front(i->item);
-	      }
-	      i = lp.erase_and_dispose(i, DelItem<ListPair>());
-	      ++count;
-	    }
-	    if (i == lp.begin()) {
-	      break;
-	    }
-	  }
-	  return count;
-	}
-	unsigned filter_class(std::list<T>* out) {
-	  unsigned count = 0;
-	  for (Lit i = --lp.end();; --i) {
-	    if (out) {
-	      out->push_front(i->item);
-	    }
-	    i = lp.erase_and_dispose(i, DelItem<ListPair>());
-	    ++count;
-	    if (i == lp.begin()) {
-	      break;
-	    }
-	  }
-	  return count;
-	}
-	void print() const {
-    	  typename ListPairs::const_iterator it(lp.begin()), ite(lp.end());
-    	  for (; it != ite; ++it) {
-    	    //std::cout << "      L: " << it->cost << ", " << it->item << std::endl;
-    	  }
-    	}
-    };
+    ////class Klass : public bi::avl_set_base_hook<>
+    //class Klass : public bi::set_base_hook<>
+    //{
+    //  typedef bi::list<ListPair> ListPairs;
+    //  typedef typename ListPairs::iterator Lit;
+    //  public:
+    //    K key;		// klass
+    //    ListPairs lp;
+    //    Klass(K& k) :
+    //      key(k)
+    //      {}
+    //    //friend bool operator< (const Klass &a, const Klass &b)
+    //    //  { return a.key < b.key; }
+    //    //friend bool operator> (const Klass &a, const Klass &b)
+    //    //  { return a.key > b.key; }
+    //    //friend bool operator== (const Klass &a, const Klass &b)
+    //    //  { return a.key == b.key; }
+    //    bool insert(unsigned cost, T& item, bool front) {
+    //      if (front) {
+    //        lp.push_front(*new ListPair(cost, item));
+    //      } else {
+    //        lp.push_back(*new ListPair(cost, item));
+    //      }
+    //    }
+    //    //Get the cost of the next item to dequeue
+    //    unsigned get_cost() const {
+    //      typename ListPairs::const_iterator i = lp.begin();
+    //      //std::cout << "Get lp->cost: " << std::hex << &i << std::dec << std::endl;
+    //      //return lp.begin()->cost;
+    //      return i->cost;
+    //    }
+    //    T& pop() {
+    //      Lit i = lp.begin();
+    //      T& ret = i->item;
+    //      lp.erase_and_dispose(i, DelItem<ListPair>());
+    //      return ret;
+    //    }
+    //    bool empty() const {
+    //      return lp.empty();
+    //    }
+    //    unsigned filter_list_pairs(std::function<bool (T)>& f,
+    //      std::list<T>* out) {
+    //      unsigned count = 0;
+    //      // intrusive containers can't erase with a reverse_iterator
+    //      // so we have to walk backwards on our own. Since there is
+    //      // no iterator before begin, we have to test at the end.
+    //      for (Lit i = --lp.end();; --i) {
+    //        //std::cout << "testing: " << i->cost << ", " << i->item << std::endl;
+    //        if (f(i->item)) {
+    //          //std::cout << "Deleting: " << std::endl;
+    //          if (out) {
+    //    	out->push_front(i->item);
+    //          }
+    //          i = lp.erase_and_dispose(i, DelItem<ListPair>());
+    //          ++count;
+    //        }
+    //        if (i == lp.begin()) {
+    //          break;
+    //        }
+    //      }
+    //      return count;
+    //    }
+    //    unsigned filter_class(std::list<T>* out) {
+    //      unsigned count = 0;
+    //      for (Lit i = --lp.end();; --i) {
+    //        if (out) {
+    //          out->push_front(i->item);
+    //        }
+    //        i = lp.erase_and_dispose(i, DelItem<ListPair>());
+    //        ++count;
+    //        if (i == lp.begin()) {
+    //          break;
+    //        }
+    //      }
+    //      return count;
+    //    }
+    //    void print() const {
+    //	  typename ListPairs::const_iterator it(lp.begin()), ite(lp.end());
+    //	  for (; it != ite; ++it) {
+    //	    //std::cout << "      L: " << it->cost << ", " << it->item << std::endl;
+    //	  }
+    //	}
+    //};
     //class SubQueue : public bi::avl_set_base_hook<>
     class SubQueue : public bi::set_base_hook<>
     {
-      //typedef bi::avl_set<Klass> Klasses;
-      typedef bi::rbtree<Klass> Klasses;
-      typedef typename Klasses::iterator Kit;
-      void check_end() {
-	if (next == klasses.end()) {
-	  next = klasses.begin();
-	}
-      }
+      ////typedef bi::avl_set<Klass> Klasses;
+      //typedef bi::rbtree<Klass> Klasses;
+      //typedef typename Klasses::iterator Kit;
+      typedef bi::list<ListPair> QueueItems;
+      typedef typename QueueItems::iterator QI;
+      //void check_end() {
+      //  if (next == klasses.end()) {
+      //    next = klasses.begin();
+      //  }
+      //}
       public:
 	unsigned key;	// priority
-	Klasses klasses;
-	Kit next;
+	//Klasses klasses;
+	QueueItems qitems;
+	//Kit next;
 	SubQueue(unsigned& p) :
-	  key(p),
-	  next(klasses.begin())
+	  //key(p),
+	  //next(klasses.begin())
+	  key(p)
 	  {}
       bool empty() const {
-	return klasses.empty();
+	//return klasses.empty();
+	return qitems.empty();
       }
       bool insert(K& cl, unsigned cost, T& item, bool front = false) {
-	typename Klasses::insert_commit_data insert_data;
-      	std::pair<Kit, bool> ret =
-	  //klasses.insert_check(cl, MapKey<Klass>(), insert_data);
-	  klasses.insert_unique_check(cl, MapKey<Klass>(), insert_data);
-      	if (ret.second) {
-      	  //ret.first = klasses.insert_commit(*new Klass(cl), insert_data);
-      	  ret.first = klasses.insert_unique_commit(*new Klass(cl), insert_data);
-	  check_end();
-      	}
-      	ret.first->insert(cost, item, front);
+	//typename Klasses::insert_commit_data insert_data;
+      	//std::pair<Kit, bool> ret =
+	//  //klasses.insert_check(cl, MapKey<Klass>(), insert_data);
+	//  klasses.insert_unique_check(cl, MapKey<Klass>(), insert_data);
+      	//if (ret.second) {
+      	//  //ret.first = klasses.insert_commit(*new Klass(cl), insert_data);
+      	//  ret.first = klasses.insert_unique_commit(*new Klass(cl), insert_data);
+	//  check_end();
+      	//}
+      	//ret.first->insert(cost, item, front);
+	if (front) {
+	  qitems.push_front(*new ListPair(cl, cost, item));
+	} else {
+	  qitems.push_back(*new ListPair(cl, cost, item));
+	}
       }
       // Get the cost of the next item to be dequeued
       unsigned get_cost() const {
-	return next->get_cost();
+	return qitems.begin()->cost;
       }
       T& pop() {
-	//std::cout << "Next pointer: " << std::hex << &next << std::dec << std::endl;
-	//if (next == klasses.end()) {
-	  //std::cout << "Next is at the end." << std::endl;
+	////std::cout << "Next pointer: " << std::hex << &next << std::dec << std::endl;
+	////if (next == klasses.end()) {
+	//  //std::cout << "Next is at the end." << std::endl;
+	////}
+	////if (next == klasses.end()) {
+	////  next = klasses.begin();
+	////}
+	//T& ret = next->pop();
+	//if (next->empty()) {
+	//  next = klasses.erase_and_dispose(next, DelItem<Klass>());
 	//}
-	//if (next == klasses.end()) {
-	//  next = klasses.begin();
-	//}
-	T& ret = next->pop();
-	if (next->empty()) {
-	  next = klasses.erase_and_dispose(next, DelItem<Klass>());
-	}
-	//if (next == klasses.end()) {
-	//  next = klasses.begin();
-	//}
-	check_end();
-	//if (next != klasses.end()) {
-	//  std::cout << "pop" << std::endl;
-	//  std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
-	//  std::cout << "test next: " << std::endl;
-	//  std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
-	//  std::cout << "next test complete." << std::endl;
-	//}
+	////if (next == klasses.end()) {
+	////  next = klasses.begin();
+	////}
+	//check_end();
+	////if (next != klasses.end()) {
+	////  std::cout << "pop" << std::endl;
+	////  std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
+	////  std::cout << "test next: " << std::endl;
+	////  std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
+	////  std::cout << "next test complete." << std::endl;
+	////}
+	T& ret = qitems.begin()->item;
+	qitems.erase_and_dispose(qitems.begin(), DelItem<ListPair>());
 	return ret;
       }
       unsigned filter_list_pairs(std::function<bool (T)>& f, std::list<T>* out) {
 	unsigned count = 0;
-	for (Kit i = klasses.begin(); i != klasses.end();) {
-	  //cout << "going to test klass: " << i->key << std::endl;
-	  count += i->filter_list_pairs(f, out);
-	  if (i->empty()) {
-	    i = klasses.erase_and_dispose(i, DelItem<Klass>());
-	  } else {
-	    ++i;
-	  }
-	}
-	check_end();
-	//if (next == klasses.end()) {
-	//  next = klasses.begin();
+	//for (Kit i = klasses.begin(); i != klasses.end();) {
+	//  //cout << "going to test klass: " << i->key << std::endl;
+	//  count += i->filter_list_pairs(f, out);
+	//  if (i->empty()) {
+	//    i = klasses.erase_and_dispose(i, DelItem<Klass>());
+	//  } else {
+	//    ++i;
+	//  }
 	//}
-	//std::cout << "filter_list_pairs" << std::endl;
-	//std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
-	//std::cout << "test next: " << std::endl;
-	//std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
-	//std::cout << "next test complete." << std::endl;
+	//check_end();
+	////if (next == klasses.end()) {
+	////  next = klasses.begin();
+	////}
+	////std::cout << "filter_list_pairs" << std::endl;
+	////std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
+	////std::cout << "test next: " << std::endl;
+	////std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
+	////std::cout << "next test complete." << std::endl;
+        // intrusive containers can't erase with a reverse_iterator
+        // so we have to walk backwards on our own. Since there is
+        // no iterator before begin, we have to test at the end.
+        for (QI i = --qitems.end();; --i) {
+          //std::cout << "testing: " << i->cost << ", " << i->item << std::endl;
+          if (f(i->item)) {
+            //std::cout << "Deleting: " << std::endl;
+            if (out) {
+              out->push_front(i->item);
+            }
+            i = qitems.erase_and_dispose(i, DelItem<ListPair>());
+            ++count;
+          }
+          if (i == qitems.begin()) {
+            break;
+          }
+        }
 	return count;
       }
       unsigned filter_class(K& cl, std::list<T>* out) {
 	unsigned count = 0;
-	Kit i = klasses.find(cl, MapKey<Klass>());
-	//std::cout << "filter_class" << std::endl;
-	//std::cout << "next: " << std::hex << &next << " <-> " << &i << std::dec << std::endl;
-	if (i != klasses.end()) {
-	  count = i->filter_class(out);
-	}
-	Kit tmp = klasses.erase_and_dispose(i, DelItem<Klass>());
-	if (next == i) {
-	  next = tmp;
-	}
-	check_end();
-	//if (next == klasses.end()) {
-	//  next = klasses.begin();
+	//Kit i = klasses.find(cl, MapKey<Klass>());
+	////std::cout << "filter_class" << std::endl;
+	////std::cout << "next: " << std::hex << &next << " <-> " << &i << std::dec << std::endl;
+	//if (i != klasses.end()) {
+	//  count = i->filter_class(out);
 	//}
-	//std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
-	//std::cout << "test next: " << std::endl;
-	//std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
-	//std::cout << "next test complete." << std::endl;
-	//std::cout << "Removed " << count << " items." << std::endl;
+	//Kit tmp = klasses.erase_and_dispose(i, DelItem<Klass>());
+	//if (next == i) {
+	//  next = tmp;
+	//}
+	//check_end();
+	////if (next == klasses.end()) {
+	////  next = klasses.begin();
+	////}
+	////std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
+	////std::cout << "test next: " << std::endl;
+	////std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
+	////std::cout << "next test complete." << std::endl;
+	////std::cout << "Removed " << count << " items." << std::endl;
+        for (QI i = --qitems.end();; --i) {
+	  if (i->klass == cl) {
+	    if (out) {
+	      out->push_front(i->item);
+	    }
+	    i = qitems.erase_and_dispose(i, DelItem<ListPair>());
+	    ++count;
+	    if (i == qitems.begin()) {
+	      break;
+	    }
+	  }
+        }
 	return count;
       }
       void print() const {
-        typename Klasses::const_iterator it(klasses.begin()), ite(klasses.end());
-        for (; it != ite; ++it) {
-          std::cout << "   K: " << it->key << std::endl;
-          it->print();
-        }
+	//typename Klasses::const_iterator it(klasses.begin()), ite(klasses.end());
+        //for (; it != ite; ++it) {
+        //  std::cout << "   K: " << it->key << std::endl;
+        //  it->print();
+        //}
+	for (QI i = qitems.begin(); i != qitems.end(); ++i) {
+	  std::cout << "   K: " << i->klass << ", C: " << i->cost << ", I: " << i->item << std::endl;
+	}
       }
     };
     class Queue {
@@ -413,6 +459,7 @@ class TestQueue :  public OpQueue <T, K>
       normal.insert(p, cl, cost, item, true);
     }
     T dequeue() {
+      assert(strict.size + normal.size > 0);
       if (!strict.empty()) {
 	//std::cout << "Dequeueing from strict." << std::endl;
 	return strict.pop(true);
