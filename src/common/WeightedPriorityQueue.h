@@ -1,14 +1,22 @@
 // -*- mode:C++; tab-width:8; c-basic-offset:2; indent-tabs-mode:t -*-
 // vim: ts=8 sw=2 smarttab
+/*
+ * Ceph - scalable distributed file system
+ *
+ * Copyright (C) 2004-2006 Sage Weil <sage@newdream.net>
+ *
+ * This is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License version 2.1, as published by the Free Software
+ * Foundation.  See file COPYING.
+ *
+ */
 
 #ifndef WP_QUEUE_H
 #define WP_QUEUE_H
 
 #include "OpQueue.h"
 
-#include <functional>
-#include <list>
-#include <iostream>
 #include <boost/intrusive/list.hpp>
 #include <boost/intrusive/rbtree.hpp>
 #include <boost/intrusive/avl_set.hpp>
@@ -55,191 +63,41 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
           item(i)
           {}
     };
-    ////class Klass : public bi::avl_set_base_hook<>
-    //class Klass : public bi::set_base_hook<>
-    //{
-    //  typedef bi::list<ListPair> ListPairs;
-    //  typedef typename ListPairs::iterator Lit;
-    //  public:
-    //    K key;		// klass
-    //    ListPairs lp;
-    //    Klass(K& k) :
-    //      key(k)
-    //      {}
-    //    //friend bool operator< (const Klass &a, const Klass &b)
-    //    //  { return a.key < b.key; }
-    //    //friend bool operator> (const Klass &a, const Klass &b)
-    //    //  { return a.key > b.key; }
-    //    //friend bool operator== (const Klass &a, const Klass &b)
-    //    //  { return a.key == b.key; }
-    //    bool insert(unsigned cost, T& item, bool front) {
-    //      if (front) {
-    //        lp.push_front(*new ListPair(cost, item));
-    //      } else {
-    //        lp.push_back(*new ListPair(cost, item));
-    //      }
-    //    }
-    //    //Get the cost of the next item to dequeue
-    //    unsigned get_cost() const {
-    //      typename ListPairs::const_iterator i = lp.begin();
-    //      //std::cout << "Get lp->cost: " << std::hex << &i << std::dec << std::endl;
-    //      //return lp.begin()->cost;
-    //      return i->cost;
-    //    }
-    //    T& pop() {
-    //      Lit i = lp.begin();
-    //      T& ret = i->item;
-    //      lp.erase_and_dispose(i, DelItem<ListPair>());
-    //      return ret;
-    //    }
-    //    bool empty() const {
-    //      return lp.empty();
-    //    }
-    //    unsigned filter_list_pairs(std::function<bool (T)>& f,
-    //      std::list<T>* out) {
-    //      unsigned count = 0;
-    //      // intrusive containers can't erase with a reverse_iterator
-    //      // so we have to walk backwards on our own. Since there is
-    //      // no iterator before begin, we have to test at the end.
-    //      for (Lit i = --lp.end();; --i) {
-    //        //std::cout << "testing: " << i->cost << ", " << i->item << std::endl;
-    //        if (f(i->item)) {
-    //          //std::cout << "Deleting: " << std::endl;
-    //          if (out) {
-    //    	out->push_front(i->item);
-    //          }
-    //          i = lp.erase_and_dispose(i, DelItem<ListPair>());
-    //          ++count;
-    //        }
-    //        if (i == lp.begin()) {
-    //          break;
-    //        }
-    //      }
-    //      return count;
-    //    }
-    //    unsigned filter_class(std::list<T>* out) {
-    //      unsigned count = 0;
-    //      for (Lit i = --lp.end();; --i) {
-    //        if (out) {
-    //          out->push_front(i->item);
-    //        }
-    //        i = lp.erase_and_dispose(i, DelItem<ListPair>());
-    //        ++count;
-    //        if (i == lp.begin()) {
-    //          break;
-    //        }
-    //      }
-    //      return count;
-    //    }
-    //    void print() const {
-    //	  typename ListPairs::const_iterator it(lp.begin()), ite(lp.end());
-    //	  for (; it != ite; ++it) {
-    //	    //std::cout << "      L: " << it->cost << ", " << it->item << std::endl;
-    //	  }
-    //	}
-    //};
-    //class SubQueue : public bi::avl_set_base_hook<>
     class SubQueue : public bi::set_base_hook<>
     {
-      ////typedef bi::avl_set<Klass> Klasses;
-      //typedef bi::rbtree<Klass> Klasses;
-      //typedef typename Klasses::iterator Kit;
       typedef bi::list<ListPair> QueueItems;
       typedef typename QueueItems::iterator QI;
-      //void check_end() {
-      //  if (next == klasses.end()) {
-      //    next = klasses.begin();
-      //  }
-      //}
       public:
 	unsigned key;	// priority
-	//Klasses klasses;
 	QueueItems qitems;
-	//Kit next;
 	SubQueue(unsigned& p) :
-	  //key(p),
-	  //next(klasses.begin())
 	  key(p)
 	  {}
       bool empty() const {
-	//return klasses.empty();
-	return qitems.empty();
+        return qitems.empty();
       }
       void insert(K& cl, unsigned cost, T& item, bool front = false) {
-	//typename Klasses::insert_commit_data insert_data;
-      	//std::pair<Kit, bool> ret =
-	//  //klasses.insert_check(cl, MapKey<Klass>(), insert_data);
-	//  klasses.insert_unique_check(cl, MapKey<Klass>(), insert_data);
-      	//if (ret.second) {
-      	//  //ret.first = klasses.insert_commit(*new Klass(cl), insert_data);
-      	//  ret.first = klasses.insert_unique_commit(*new Klass(cl), insert_data);
-	//  check_end();
-      	//}
-      	//ret.first->insert(cost, item, front);
 	if (front) {
 	  qitems.push_front(*new ListPair(cl, cost, item));
 	} else {
 	  qitems.push_back(*new ListPair(cl, cost, item));
 	}
       }
-      // Get the cost of the next item to be dequeued
       unsigned get_cost() const {
 	return qitems.begin()->cost;
       }
       T& pop() {
-	////std::cout << "Next pointer: " << std::hex << &next << std::dec << std::endl;
-	////if (next == klasses.end()) {
-	//  //std::cout << "Next is at the end." << std::endl;
-	////}
-	////if (next == klasses.end()) {
-	////  next = klasses.begin();
-	////}
-	//T& ret = next->pop();
-	//if (next->empty()) {
-	//  next = klasses.erase_and_dispose(next, DelItem<Klass>());
-	//}
-	////if (next == klasses.end()) {
-	////  next = klasses.begin();
-	////}
-	//check_end();
-	////if (next != klasses.end()) {
-	////  std::cout << "pop" << std::endl;
-	////  std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
-	////  std::cout << "test next: " << std::endl;
-	////  std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
-	////  std::cout << "next test complete." << std::endl;
-	////}
 	T& ret = qitems.begin()->item;
 	qitems.erase_and_dispose(qitems.begin(), DelItem<ListPair>());
 	return ret;
       }
       unsigned filter_list_pairs(std::function<bool (T)>& f, std::list<T>* out) {
 	unsigned count = 0;
-	//for (Kit i = klasses.begin(); i != klasses.end();) {
-	//  //cout << "going to test klass: " << i->key << std::endl;
-	//  count += i->filter_list_pairs(f, out);
-	//  if (i->empty()) {
-	//    i = klasses.erase_and_dispose(i, DelItem<Klass>());
-	//  } else {
-	//    ++i;
-	//  }
-	//}
-	//check_end();
-	////if (next == klasses.end()) {
-	////  next = klasses.begin();
-	////}
-	////std::cout << "filter_list_pairs" << std::endl;
-	////std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
-	////std::cout << "test next: " << std::endl;
-	////std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
-	////std::cout << "next test complete." << std::endl;
         // intrusive containers can't erase with a reverse_iterator
         // so we have to walk backwards on our own. Since there is
         // no iterator before begin, we have to test at the end.
         for (QI i = --qitems.end();; --i) {
-          //std::cout << "testing: " << i->cost << ", " << i->item << std::endl;
           if (f(i->item)) {
-            //std::cout << "Deleting: " << std::endl;
             if (out) {
               out->push_front(i->item);
             }
@@ -254,25 +112,6 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
       }
       unsigned filter_class(K& cl, std::list<T>* out) {
 	unsigned count = 0;
-	//Kit i = klasses.find(cl, MapKey<Klass>());
-	////std::cout << "filter_class" << std::endl;
-	////std::cout << "next: " << std::hex << &next << " <-> " << &i << std::dec << std::endl;
-	//if (i != klasses.end()) {
-	//  count = i->filter_class(out);
-	//}
-	//Kit tmp = klasses.erase_and_dispose(i, DelItem<Klass>());
-	//if (next == i) {
-	//  next = tmp;
-	//}
-	//check_end();
-	////if (next == klasses.end()) {
-	////  next = klasses.begin();
-	////}
-	////std::cout << "klasses.size(): " << klasses.size() << ", next pointer " << std::hex << &next << std::dec << std::endl;
-	////std::cout << "test next: " << std::endl;
-	////std::cout << "next->get_cost(): " << next->get_cost() << std::endl;
-	////std::cout << "next test complete." << std::endl;
-	////std::cout << "Removed " << count << " items." << std::endl;
         for (QI i = --qitems.end();; --i) {
 	  if (i->klass == cl) {
 	    if (out) {
@@ -287,20 +126,12 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
         }
 	return count;
       }
-      void print() const {
-	//typename Klasses::const_iterator it(klasses.begin()), ite(klasses.end());
-        //for (; it != ite; ++it) {
-        //  std::cout << "   K: " << it->key << std::endl;
-        //  it->print();
-        //}
-	std::cout << "Number of items in priority: " << qitems.size() << std::endl;
-	for (typename QueueItems::const_iterator i = qitems.begin(); i != qitems.end(); ++i) {
-	  std::cout << "   K: " << i->klass << ", C: " << i->cost << ", I: " << std::endl;
-	}
+      void dump(ceph::Formatter *f) const {
+	f->dump_int("num_keys", qitems.size());
+	f->dump_int("first_item_cost", qitems.begin()->cost);
       }
     };
     class Queue {
-      //typedef bi::avl_set<SubQueue> SubQueues;
       typedef bi::rbtree<SubQueue> SubQueues;
       typedef typename SubQueues::iterator Sit;
       SubQueues queues;
@@ -319,10 +150,8 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
 	void insert(unsigned p, K& cl, unsigned cost, T& item, bool front = false) {
 	  typename SubQueues::insert_commit_data insert_data;
       	  std::pair<typename SubQueues::iterator, bool> ret =
-      	    //queues.insert_check(p, MapKey<SubQueue>(), insert_data);
       	    queues.insert_unique_check(p, MapKey<SubQueue>(), insert_data);
       	  if (ret.second) {
-      	    //ret.first = queues.insert_commit(*new SubQueue(p), insert_data);
       	    ret.first = queues.insert_unique_commit(*new SubQueue(p), insert_data);
 	    total_prio += p;
       	  }
@@ -336,17 +165,12 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
 	  --size;
 	  Sit i = --queues.end();
 	  if (strict) {
-	    //std::cout << "Strict: got iterator. " << std::hex << &i << std::dec << std::endl;
 	    T& ret = i->pop();
-	    //std::cout << "Got item, going to try to clean up." << std::endl;
 	    if (i->empty()) {
-	      //std::cout << "Empty priority, going to clean up." << std::endl;
 	      queues.erase_and_dispose(i, DelItem<SubQueue>());
-	      //std::cout << "Clean up successful." << std::endl;
 	    }
 	    return ret;
 	  }
-	  //std::cout << "Queue size: " << queues.size() << ", total_prio: " << total_prio << std::endl;
 	  if (queues.size() > 1) {
 	    while (true) {
 	      // Pick a new priority out of the total priority.
@@ -359,32 +183,17 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
 	      // chance of dequeuing a high priority op so spend less time spinning.
 	      //std::cout << "prio: " << prio << ", tp: " << tp << "/" << total_prio << std::endl;
 	      while (prio <= tp) {
-		//if (tp > 1000) {
-		//  print();
-		//}
-		//assert(tp < 1000);
-		//std::cout << "decrement iterator" << std::endl;
 		--i;
-		//std::cout << "update tp, subtracting " << i->key << std::endl;
-		//if (i->key < prio) {
-		//  std::cout << "key < prio, stopping the vicious cycle." << std::endl;
-		//  break;
-		//}
 		tp -= i->key;
-		//std::cout << "prio: " << prio << ", tp: " << tp << "/" << total_prio << std::endl;
 	      }
 	      // Flip a coin to see if this priority gets to run based on cost.
 	      // The next op's cost is multiplied by .9 and subtracted from the
 	      // max cost seen. Ops with lower costs will have a larger value
 	      // and allow them to be selected easier than ops with high costs.
-	      //std::cout << "Try to dequeue prio: " << i->key << std::endl;
-	      //std::cout << "Next klass in prio to dequeue: " << i->next->key << std::endl;
-	      //std::cout << "Check the cost" << std::endl;
 	      if (max_cost == 0 || rand() % max_cost <=
 		  (max_cost - ((i->get_cost() * 9) / 10))) {
 		break;
 	      }
-	      //std::cout << "Could not dequeue based on cost" << std::endl;
 	      i = --queues.end();
 	    }
 	  }
@@ -394,13 +203,6 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
 	    queues.erase_and_dispose(i, DelItem<SubQueue>());
 	  }
 	  return ret;
-	}
-	void print() const {
-	  typename SubQueues::const_iterator it(queues.begin()), ite(queues.end());
-      	  for (; it != ite; ++it) {
-      	    std::cout << "P: " << it->key << std::endl;
-      	    it->print();
-      	  }
 	}
 	void filter_list_pairs(std::function<bool (T)>& f, std::list<T>* out) {
 	  for (Sit i = queues.begin(); i != queues.end();) {
@@ -422,6 +224,17 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
 	    } else {
 	      ++i;
 	    }
+	  }
+	}
+	void dump(ceph::Formatter *f) const {
+	  for (typename SubQueues::const_iterator i = queues.begin();
+	        i != queues.end(); ++i) {
+	    f->dump_int("total_priority", total_prio);
+	    f->dump_int("max_cost", max_cost);
+	    f->open_object_section("subqueue");
+	    f->dump_int("priority", i->key);
+	    i->dump(f);
+	    f->close_section();
 	  }
 	}
     };
@@ -464,13 +277,17 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
     T dequeue() {
       assert(strict.size + normal.size > 0);
       if (!strict.empty()) {
-	//std::cout << "Dequeueing from strict." << std::endl;
 	return strict.pop(true);
       }
-      //std::cout << "Dequeueing from normal." << std::endl;
       return normal.pop();
     }
     void dump(ceph::Formatter *f) const {
+      f->open_array_section("high_queues");
+      strict.dump(f);
+      f->close_section();
+      f->open_array_section("queues");
+      normal.dump(f);
+      f->close_section();
     }
 };
 
