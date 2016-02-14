@@ -179,9 +179,8 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
 	      // Find the priority coresponding to the picked number.
 	      // Subtract high priorities to low priorities until the picked number
 	      // is more than the total and try to dequeue that priority.
-	      // Reverse the direction from previous because there is a higher
+	      // Reverse the direction from previous implementation because there is a higher
 	      // chance of dequeuing a high priority op so spend less time spinning.
-	      //std::cout << "prio: " << prio << ", tp: " << tp << "/" << total_prio << std::endl;
 	      while (prio <= tp) {
 		--i;
 		tp -= i->key;
