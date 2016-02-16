@@ -86,8 +86,8 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
       unsigned get_cost() const {
 	return qitems.begin()->cost;
       }
-      T& pop() {
-	T& ret = qitems.begin()->item;
+      T pop() {
+	T ret = qitems.begin()->item;
 	qitems.erase_and_dispose(qitems.begin(), DelItem<ListPair>());
 	return ret;
       }
@@ -161,11 +161,11 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
 	  }
 	  ++size;
 	}
-	T& pop(bool strict = false) {
+	T pop(bool strict = false) {
 	  --size;
 	  Sit i = --queues.end();
 	  if (strict) {
-	    T& ret = i->pop();
+	    T ret = i->pop();
 	    if (i->empty()) {
 	      queues.erase_and_dispose(i, DelItem<SubQueue>());
 	    }
@@ -196,7 +196,7 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
 	      i = --queues.end();
 	    }
 	  }
-	  T& ret = i->pop();
+	  T ret = i->pop();
 	  if (i->empty()) {
 	    total_prio -= i->key;
 	    queues.erase_and_dispose(i, DelItem<SubQueue>());
