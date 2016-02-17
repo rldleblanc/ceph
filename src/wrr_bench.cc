@@ -3,7 +3,7 @@
 
 #include "include/types.h"
 #include "common/PrioritizedQueue.h"
-#include "common/TestQueue.h"
+//#include "common/TestQueue.h"
 #include "common/WeightedPriorityQueue.h"
 #include "include/assert.h"
 #include <iostream>
@@ -419,7 +419,7 @@ class Queue {
 };
 
 typedef Queue<PrioritizedQueue<Op, unsigned>> PQ;
-typedef Queue<TestQueue<Op, unsigned>> TQ;
+typedef Queue<WeightedPriorityQueue<Op, unsigned>> TQ;
 typedef Queue<WeightedPriorityQueue<Op, unsigned>> WQ;
 
 void work_queues(PQ &pq, WQ &wq, TQ &tq, int count, int eratio,
