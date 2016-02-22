@@ -5,9 +5,13 @@
 #include "common/PrioritizedQueue.h"
 //#include "common/TestQueue.h"
 #include "common/WeightedPriorityQueue.h"
+#include "common/WeightedPriorityQueue2.h"
 #include "include/assert.h"
 #include <iostream>
 #include <chrono>
+#include <boost/intrusive_ptr.hpp>
+#include <boost/smart_ptr/intrusive_ref_counter.hpp>
+#include <boost/variant.hpp>
 
 #include "RunningStat.h"
 
@@ -19,6 +23,61 @@ typedef unsigned Kost;
 typedef unsigned Strick;
 typedef std::tuple<Prio, Klass, Kost, unsigned, Strick> Op;
 typedef std::chrono::time_point<std::chrono::system_clock> SWatch;
+namespace bi = boost::intrusive;
+
+class PGRef : public boost::intrusive_ref_counter<PGRef> {
+  unsigned PG;
+  public:
+    PGRef(unsigned p) :
+      PG(p) {};
+};
+
+class PGQueuable {
+  typedef boost::variant <
+    unsigned,
+    int,
+    double
+      > QVariant;
+  QVariant qvariant;
+  int cost;
+  unsigned priority;
+  time_t start_time;
+  double owner;
+  struct RunVis : public boost::static_visitor<> {
+    unsigned *osd;
+    PGRef &pg;
+    double &handle;
+    RunVis(unsigned *osd, PGRef &pg, double &handle)
+      : osd(osd), pg(pg), handle(handle) {}
+    void operator()(unsigned &op);
+    void operator()(int &op);
+    void operator()(double &op);
+  };
+public:
+  // cppcheck-suppress noExplicitConstructor 
+  //PGQueuable()
+  //  : qvariant(0), cost(1), priority(2), start_time(time(0)), owner(2.0) {}
+  PGQueuable(unsigned &op, unsigned &c, unsigned &s)
+    : qvariant(op), cost((int) c), priority(op), start_time(time(0)), owner((double) s) {}
+  PGQueuable(int &op, int &c, unsigned &s)
+    : qvariant(op), cost(c), priority((unsigned) op), start_time(time(0)), owner((double) op) {}
+  PGQueuable(double &op, int &c, unsigned &s)
+    : qvariant(op), cost(c), priority((unsigned) op), start_time(time(0)), owner(op) {}
+  boost::optional<unsigned> maybe_get_op() {
+    unsigned *op = boost::get<unsigned>(&qvariant);
+    return op ? *op : boost::optional<unsigned>();
+  }
+  void run(unsigned *osd, PGRef &pg, double &handle) {
+    RunVis v(osd, pg, handle);
+    boost::apply_visitor(v, qvariant);
+  }
+  unsigned get_priority() const { return priority; }
+  int get_cost() const { return cost; }
+  time_t get_start_time() const { return start_time; }
+  double get_owner() const { return owner; }
+};
+
+typedef std::pair<boost::intrusive_ptr<PGRef>, PGQueuable> OpPair;
 
 template <typename T>
 class Queue {
@@ -100,20 +159,28 @@ class Queue {
     }
     void enqueue_op(Op &op, bool front = false,
        	unsigned strict = false) {
+      //{
+      //  PGQueuable pg = PGQueuable(std::get<0>(op), std::get<2>(op), std::get<4>(op));
+      //  unsigned t = pg.get_priority();
+      //}
+      OpPair oppair = std::make_pair(boost::intrusive_ptr<PGRef>(new PGRef(std::get<1>(op))),
+	    PGQueuable(std::get<0>(op), std::get<2>(op), std::get<4>(op)));
+      //PGQueuable pg = oppair.second;
+      //unsigned test = pg.get_priority();
       start = std::chrono::system_clock::now();
       if (strict) {
 	if (front) {
-          q.enqueue_strict_front(std::get<1>(op), std::get<0>(op), op);
+          q.enqueue_strict_front(std::get<1>(op), std::get<0>(op), oppair);
 	} else {
-          q.enqueue_strict(std::get<1>(op), std::get<0>(op), op);
+          q.enqueue_strict(std::get<1>(op), std::get<0>(op), oppair);
 	}
       } else {
 	if (front) {
 	  q.enqueue_front(std::get<1>(op), std::get<0>(op),
-	            std::get<2>(op), op);
+	            std::get<2>(op), oppair);
 	} else {
 	  q.enqueue(std::get<1>(op), std::get<0>(op),
-	            std::get<2>(op), op);
+	            std::get<2>(op), oppair);
 	}
       }
       end = std::chrono::system_clock::now();
@@ -125,32 +192,33 @@ class Queue {
       case 6:
 	// Strict queue
 	if (printstrict) {
-	  eq_add_stats(sqstat, op);
-	  eq_add_stats(sqrstat, op);
+	  eq_add_stats(sqstat, oppair);
+	  eq_add_stats(sqrstat, oppair);
 	}
 	break;
       default:
 	//Normal queue
-	eq_add_stats(nqstat, op);
-	eq_add_stats(nqrstat, op);
+	eq_add_stats(nqstat, oppair);
+	eq_add_stats(nqrstat, oppair);
 	break;
       }
     }
-    void eq_add_stats(Stats &s, Op &r) {
-	++s.totalopdist[std::get<0>(r)];
-	s.totalsizedist[std::get<0>(r)] += std::get<2>(r);
-	s.totalweightops += (std::get<0>(r) + 1);
-	s.totalweightcost += (std::get<0>(r) +1) * std::get<2>(r);
+    void eq_add_stats(Stats &s, OpPair &r) {
+	++s.totalopdist[r.second.get_priority()];
+	s.totalsizedist[r.second.get_priority()] += r.second.get_cost();
+	s.totalweightops += (r.second.get_priority() + 1);
+	s.totalweightcost += (r.second.get_priority() + 1) * r.second.get_cost();
     }
-    Op dequeue_op() {
-      Op r;
+    OpPair dequeue_op() {
+      typedef std::pair<boost::intrusive_ptr<PGRef>, PGQueuable> OpPair;
+      //OpPair r;
       unsigned missed;
       start = std::chrono::system_clock::now();
       //r = q.dequeue(missed);
-      r = q.dequeue();
+      OpPair r = q.dequeue();
       end = std::chrono::system_clock::now();
       // Keep track of strict and normal queues seperatly
-      switch (std::get<4>(r)) {
+      switch ((unsigned) r.second.get_owner()) {
       case 6:
 	// Strict queue
 	if (printstrict) {
@@ -169,13 +237,13 @@ class Queue {
       }
       return r;
     }
-    void dq_add_stats(Stats &s, Op &r,
+    void dq_add_stats(Stats &s, OpPair &r,
        	std::chrono::duration<double> t) {
       s.dqtime.Push(std::chrono::duration_cast<std::chrono::nanoseconds>(t).count());
-      ++s.opdist[std::get<0>(r)];
+      ++s.opdist[r.second.get_priority()];
       ++s.totalops;
-      s.sizedist[std::get<0>(r)] += std::get<2>(r);
-      s.totalcost += std::get<2>(r);
+      s.sizedist[r.second.get_priority()] += r.second.get_cost();
+      s.totalcost += r.second.get_cost();
     }
 
     Queue(unsigned max_per = 0, unsigned min_c =0) :
@@ -233,7 +301,7 @@ class Queue {
     }
     void dequeue() {
       if (!q.empty()) {
-        Op op = dequeue_op();
+        OpPair op = dequeue_op();
       }
     }
 
@@ -418,9 +486,9 @@ class Queue {
     }
 };
 
-typedef Queue<PrioritizedQueue<Op, unsigned>> PQ;
-typedef Queue<WeightedPriorityQueue<Op, unsigned>> TQ;
-typedef Queue<WeightedPriorityQueue<Op, unsigned>> WQ;
+typedef Queue<PrioritizedQueue<OpPair, unsigned>> PQ;
+typedef Queue<WeightedPriorityQueue2<OpPair, unsigned>> TQ;
+typedef Queue<WeightedPriorityQueue<OpPair, unsigned>> WQ;
 
 void work_queues(PQ &pq, WQ &wq, TQ &tq, int count, int eratio,
     string name, string* csv = 0, unsigned skew = 0) {
