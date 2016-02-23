@@ -30,6 +30,7 @@ class PGRef : public boost::intrusive_ref_counter<PGRef> {
   public:
     PGRef(unsigned p) :
       PG(p) {};
+    unsigned value() { return PG; }
 };
 
 class PGQueuable {
@@ -58,11 +59,21 @@ public:
   //PGQueuable()
   //  : qvariant(0), cost(1), priority(2), start_time(time(0)), owner(2.0) {}
   PGQueuable(unsigned &op, unsigned &c, unsigned &s)
-    : qvariant(op), cost((int) c), priority(op), start_time(time(0)), owner((double) s) {}
+    //: qvariant(op), cost((int) c), priority(op), start_time(time(0)), owner((double) s) {}
+    : cost((int) c), priority(op), start_time(time(0)), owner((double) s) {}
   PGQueuable(int &op, int &c, unsigned &s)
-    : qvariant(op), cost(c), priority((unsigned) op), start_time(time(0)), owner((double) op) {}
+    //: qvariant(op), cost(c), priority((unsigned) op), start_time(time(0)), owner((double) op) {}
+    : cost(c), priority((unsigned) op), start_time(time(0)), owner((double) op) {}
   PGQueuable(double &op, int &c, unsigned &s)
-    : qvariant(op), cost(c), priority((unsigned) op), start_time(time(0)), owner(op) {}
+    //: qvariant(op), cost(c), priority((unsigned) op), start_time(time(0)), owner(op) {}
+    : cost(c), priority((unsigned) op), start_time(time(0)), owner(op) {}
+  //PGQueuable(PGQueuable&& pgq)
+  //  : qvariant(std::move(pgq.qvariant)),
+  //    cost(std::move(pgq.cost)),
+  //    priority(std::move(pgq.priority)),
+  //    start_time(std::move(pgq.start_time)),
+  //    owner(std::move(pgq.owner))
+  //{}
   boost::optional<unsigned> maybe_get_op() {
     unsigned *op = boost::get<unsigned>(&qvariant);
     return op ? *op : boost::optional<unsigned>();
@@ -163,8 +174,10 @@ class Queue {
       //  PGQueuable pg = PGQueuable(std::get<0>(op), std::get<2>(op), std::get<4>(op));
       //  unsigned t = pg.get_priority();
       //}
+      //PGRef* pgref = new PGRef(std::get<1>(op));
       OpPair oppair = std::make_pair(boost::intrusive_ptr<PGRef>(new PGRef(std::get<1>(op))),
 	    PGQueuable(std::get<0>(op), std::get<2>(op), std::get<4>(op)));
+      //OpPair oppair2 = oppair;
       //PGQueuable pg = oppair.second;
       //unsigned test = pg.get_priority();
       start = std::chrono::system_clock::now();
@@ -192,22 +205,22 @@ class Queue {
       case 6:
 	// Strict queue
 	if (printstrict) {
-	  eq_add_stats(sqstat, oppair);
-	  eq_add_stats(sqrstat, oppair);
+	  eq_add_stats(sqstat, op);
+	  eq_add_stats(sqrstat, op);
 	}
 	break;
       default:
 	//Normal queue
-	eq_add_stats(nqstat, oppair);
-	eq_add_stats(nqrstat, oppair);
+	eq_add_stats(nqstat, op);
+	eq_add_stats(nqrstat, op);
 	break;
       }
     }
-    void eq_add_stats(Stats &s, OpPair &r) {
-	++s.totalopdist[r.second.get_priority()];
-	s.totalsizedist[r.second.get_priority()] += r.second.get_cost();
-	s.totalweightops += (r.second.get_priority() + 1);
-	s.totalweightcost += (r.second.get_priority() + 1) * r.second.get_cost();
+    void eq_add_stats(Stats &s, Op &r) {
+	++s.totalopdist[std::get<0>(r)];
+	s.totalsizedist[std::get<0>(r)] += std::get<2>(r);
+	s.totalweightops += (std::get<0>(r) + 1);
+	s.totalweightcost += (std::get<0>(r) + 1) * std::get<2>(r);
     }
     OpPair dequeue_op() {
       typedef std::pair<boost::intrusive_ptr<PGRef>, PGQueuable> OpPair;

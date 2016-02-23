@@ -12,8 +12,8 @@
  *
  */
 
-#ifndef WP_QUEUE_H
-#define WP_QUEUE_H
+#ifndef WP2_QUEUE_H
+#define WP2_QUEUE_H
 
 #include "OpQueue.h"
 
@@ -23,32 +23,32 @@
 
 namespace bi = boost::intrusive;
 
-using namespace std;
+//using namespace std;
 
-template <typename T>
-class MapKey
-{
-  public:
-  bool operator()(const unsigned i, const T &k) const
-  {
-    return i < k.key;
-  }
-  bool operator()(const T &k, const unsigned i) const
-  {
-    return k.key < i;
-  }
-};
-
-template <typename T>
-class DelItem
-{
-  public:
-  void operator()(T* delete_this)
-    { delete delete_this; }
-};
+//template <typename T>
+//class MapKey
+//{
+//  public:
+//  bool operator()(const unsigned i, const T &k) const
+//  {
+//    return i < k.key;
+//  }
+//  bool operator()(const T &k, const unsigned i) const
+//  {
+//    return k.key < i;
+//  }
+//};
+//
+//template <typename T>
+//class DelItem
+//{
+//  public:
+//  void operator()(T* delete_this)
+//    { delete delete_this; }
+//};
 
 template <typename T, typename K>
-class WeightedPriorityQueue :  public OpQueue <T, K>
+class WeightedPriorityQueue2 :  public OpQueue <T, K>
 {
   private:
     class ListPair : public bi::list_base_hook<>
@@ -56,11 +56,11 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
       public:
 	K klass;
         unsigned cost;
-        T item;
-        ListPair(K& k, unsigned c, T& i) :
+	std::unique_ptr<T> item;
+        ListPair(K& k, unsigned c, std::unique_ptr<T> i) :
 	  klass(k),
           cost(c),
-          item(i)
+          item(std::move(i))
           {}
     };
     class SubQueue : public bi::set_base_hook<>
@@ -76,18 +76,19 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
       bool empty() const {
         return qitems.empty();
       }
-      void insert(K& cl, unsigned cost, T& item, bool front = false) {
+      void insert(K& cl, unsigned cost, std::unique_ptr<T> item, bool front = false) {
 	if (front) {
-	  qitems.push_front(*new ListPair(cl, cost, item));
+	  qitems.push_front(*new ListPair(cl, cost, std::move(item)));
 	} else {
-	  qitems.push_back(*new ListPair(cl, cost, item));
+	  qitems.push_back(*new ListPair(cl, cost, std::move(item)));
 	}
       }
       unsigned get_cost() const {
 	return qitems.begin()->cost;
       }
-      T pop() {
-	T ret = qitems.begin()->item;
+      std::unique_ptr<T> pop() {
+	//std::cout << "Dequeue: " << std::hex << qitems.begin()->item->first << ", " << qitems.begin()->item->first->value() << std::endl;
+	std::unique_ptr<T> ret = std::move(qitems.begin()->item);
 	qitems.erase_and_dispose(qitems.begin(), DelItem<ListPair>());
 	return ret;
       }
@@ -97,9 +98,9 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
         // so we have to walk backwards on our own. Since there is
         // no iterator before begin, we have to test at the end.
         for (QI i = --qitems.end();; --i) {
-          if (f(i->item)) {
+          if (f(*i->item)) {
             if (out) {
-              out->push_front(i->item);
+              out->push_front(*i->item);
             }
             i = qitems.erase_and_dispose(i, DelItem<ListPair>());
             ++count;
@@ -115,7 +116,7 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
         for (QI i = --qitems.end();; --i) {
 	  if (i->klass == cl) {
 	    if (out) {
-	      out->push_front(i->item);
+	      out->push_front(*i->item);
 	    }
 	    i = qitems.erase_and_dispose(i, DelItem<ListPair>());
 	    ++count;
@@ -147,7 +148,8 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
 	bool empty() const {
 	  return !size;
 	}
-	void insert(unsigned p, K& cl, unsigned cost, T& item, bool front = false) {
+	void insert(unsigned p, K& cl, unsigned cost, std::unique_ptr<T> item, bool front = false) {
+	  //std::cout << "Enqueue: " << std::hex << item->first << ", " << item->first->value() << std::endl;
 	  typename SubQueues::insert_commit_data insert_data;
       	  std::pair<typename SubQueues::iterator, bool> ret =
       	    queues.insert_unique_check(p, MapKey<SubQueue>(), insert_data);
@@ -155,17 +157,17 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
       	    ret.first = queues.insert_unique_commit(*new SubQueue(p), insert_data);
 	    total_prio += p;
       	  }
-      	  ret.first->insert(cl, cost, item, front);
+      	  ret.first->insert(cl, cost, std::move(item), front);
 	  if (cost > max_cost) {
 	    max_cost = cost;
 	  }
 	  ++size;
 	}
-	T pop(bool strict = false) {
+	std::unique_ptr<T> pop(bool strict = false) {
 	  --size;
 	  Sit i = --queues.end();
 	  if (strict) {
-	    T ret = i->pop();
+	    std::unique_ptr<T> ret = i->pop();
 	    if (i->empty()) {
 	      queues.erase_and_dispose(i, DelItem<SubQueue>());
 	    }
@@ -196,7 +198,7 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
 	      i = --queues.end();
 	    }
 	  }
-	  T ret = i->pop();
+	  std::unique_ptr<T> ret = i->pop();
 	  if (i->empty()) {
 	    total_prio -= i->key;
 	    queues.erase_and_dispose(i, DelItem<SubQueue>());
@@ -241,7 +243,7 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
     Queue strict;
     Queue normal;
   public:
-    WeightedPriorityQueue(unsigned max_per, unsigned min_c) :
+    WeightedPriorityQueue2(unsigned max_per, unsigned min_c) :
       strict(),
       normal()
       {
@@ -262,35 +264,94 @@ class WeightedPriorityQueue :  public OpQueue <T, K>
       return !(strict.size + normal.size);
     }
     void enqueue_strict(K cl, unsigned p, T item) override final {
-      strict.insert(p, cl, 0, item);
+      //strict.insert(p, cl, 0, item);
+      //T* newitem = new T(item);
+      //std::unique_ptr<T> ptr(newitem);
+      //strict.insert(p, cl, 0, std::move(ptr));
+      strict.insert(p, cl, 0, std::move(std::unique_ptr<T> (new T(item))));
     }
     void enqueue_strict_front(K cl, unsigned p, T item) override final {
-      strict.insert(p, cl, 0, item, true);
+      //T* newitem = new T(item);
+      //std::unique_ptr<T> ptr(newitem);
+      //std::unique_ptr<T> ptr(new T(item));
+      //strict.insert(p, cl, 0, std::move(ptr), true);
+      strict.insert(p, cl, 0, std::move(std::unique_ptr<T> (new T(item))), true);
     }
     void enqueue(K cl, unsigned p, unsigned cost, T item) override final {
-      normal.insert(p, cl, cost, item);
+      //normal.insert(p, cl, cost, item);
+      //T* newitem = new T(item);
+      //std::unique_ptr<T> ptr(newitem);
+      //normal.insert(p, cl, 0, std::move(ptr));
+      normal.insert(p, cl, 0, std::move(std::unique_ptr<T> (new T(item))));
     }
     void enqueue_front(K cl, unsigned p, unsigned cost, T item) override final {
-      normal.insert(p, cl, cost, item, true);
+      //normal.insert(p, cl, cost, item, true);
+      //T* newitem = new T(item);
+      //std::unique_ptr<T> ptr(newitem);
+      //normal.insert(p, cl, 0, std::move(ptr), true);
+      normal.insert(p, cl, 0, std::move(std::unique_ptr<T> (new T(item))), true);
     }
     //void enqueue_strict(K cl, unsigned p, T&& item) override final {
-    //  strict.insert(p, cl, 0, item);
+    //  //T tmp(std::move(item));
+    //  //std::unique_ptr<T> ptr(std::unique_ptr<T>(std::move(tmp)));
+    //  //strict.insert(p, cl, 0, std::forward(ptr));
+    //  //typedef std::pair<int, int> ipair;
+    //  //std::unique_ptr<ipair> iptr(new ipair);
+    //  //T* newitem = &item;
+    //  //std::unique_ptr<T> iptr(newitem);
+    //  //strict.insert(p, cl, 0, std::move(iptr), true);
+    //  //strict.insert(p, cl, 0, std::move(std::unique_ptr<T>(std::move(item))));
+    //  T newitem(std::move(item));
+    //  std::unique_ptr<T> ptr(&newitem);
+    //  strict.insert(p, cl, 0, std::move(ptr));
     //}
     //void enqueue_strict_front(K cl, unsigned p, T&& item) override final {
-    //  strict.insert(p, cl, 0, item, true);
+    //  //std::unique_ptr<T> ptr(std::unique_ptr<T>(item));
+    //  //strict.insert(p, cl, 0, ptr, true);
+    //  //typedef std::pair<int, int> ipair;
+    //  //std::unique_ptr<ipair> iptr(new ipair);
+    //  //T* newitem = &item;
+    //  //std::unique_ptr<T> iptr(newitem);
+    //  //strict.insert(p, cl, 0, std::move(iptr), true);
+    //  //T* newitem(std::move(item));
+    //  //
+    //  T newitem(std::move(item));
+    //  std::unique_ptr<T> ptr(&newitem);
+    //  strict.insert(p, cl, 0, std::move(ptr), true);
+    //  //strict.insert(p, cl, 0, std::move(std::unique_ptr<T> &(std::move(item))), true);
     //}
     //void enqueue(K cl, unsigned p, unsigned cost, T&& item) override final {
-    //  normal.insert(p, cl, cost, item);
+    //  //std::unique_ptr<T> ptr(std::move(item));
+    //  //normal.insert(p, cl, cost, std::move(ptr));
+    //  //typedef std::pair<int, int> ipair;
+    //  //std::unique_ptr<ipair> iptr(new ipair);
+    //  //T* newitem = &item;
+    //  //std::unique_ptr<T> iptr(&item);
+    //  //normal.insert(p, cl, 0, std::move(std::unique_ptr<T>(std::move(item))));
+    //  T newitem(std::move(item));
+    //  std::unique_ptr<T> ptr(&newitem);
+    //  normal.insert(p, cl, 0, std::move(ptr));
     //}
     //void enqueue_front(K cl, unsigned p, unsigned cost, T&& item) override final {
-    //  normal.insert(p, cl, cost, item, true);
+    //  //std::unique_ptr<T> ptr(std::move(item));
+    //  //normal.insert(p, cl, cost, std::move(ptr), true);
+    //  //typedef std::pair<int, int> ipair;
+    //  //std::unique_ptr<ipair> iptr(new ipair);
+    //  //T* newitem = &item;
+    //  //std::unique_ptr<T> iptr(newitem);
+    //  //strict.insert(p, cl, 0, std::move(iptr), true);
+    //  //normal.insert(p, cl, 0, std::move(std::unique_ptr<T>(std::move(item))), true);
+    //  T newitem(std::move(item));
+    //  std::unique_ptr<T> ptr(&newitem);
+    //  normal.insert(p, cl, 0, std::move(ptr), true);
     //}
     T dequeue() {
       assert(strict.size + normal.size > 0);
       if (!strict.empty()) {
-	return strict.pop(true);
+	//T ret = *(strict.pop(true));
+	return *(strict.pop(true));
       }
-      return normal.pop();
+      return *normal.pop();
     }
     void dump(ceph::Formatter *f) const {
       f->open_array_section("high_queues");
